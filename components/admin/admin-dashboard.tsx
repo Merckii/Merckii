@@ -1,7 +1,12 @@
+"use client"
+
+import { useState } from "react"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { DollarSign, Users, Globe, Server, TrendingUp, AlertCircle, Settings, BarChart3 } from "lucide-react"
+import { ClientManagement } from "./client-management"
 
 const stats = [
   {
@@ -48,6 +53,8 @@ const upcomingRenewals = [
 ]
 
 export function AdminDashboard() {
+  const [activeTab, setActiveTab] = useState("overview")
+
   return (
     <div className="min-h-screen bg-gray-50 p-6">
       <div className="max-w-7xl mx-auto">
@@ -57,123 +64,172 @@ export function AdminDashboard() {
           <p className="text-gray-600">Manage your hosting business and monitor performance</p>
         </div>
 
-        {/* Stats Grid */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
-          {stats.map((stat, index) => (
-            <Card key={index}>
-              <CardContent className="p-6">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <p className="text-sm font-medium text-gray-600">{stat.title}</p>
-                    <p className="text-2xl font-bold text-gray-900">{stat.value}</p>
-                    <p className={`text-sm ${stat.color} flex items-center gap-1`}>
-                      <TrendingUp className="h-4 w-4" />
-                      {stat.change}
-                    </p>
+        <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
+          <TabsList className="grid w-full grid-cols-5">
+            <TabsTrigger value="overview">Overview</TabsTrigger>
+            <TabsTrigger value="clients">Client Portal</TabsTrigger>
+            <TabsTrigger value="orders">Orders</TabsTrigger>
+            <TabsTrigger value="billing">Billing</TabsTrigger>
+            <TabsTrigger value="settings">Settings</TabsTrigger>
+          </TabsList>
+
+          <TabsContent value="overview" className="space-y-8">
+            {/* Stats Grid */}
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+              {stats.map((stat, index) => (
+                <Card key={index}>
+                  <CardContent className="p-6">
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <p className="text-sm font-medium text-gray-600">{stat.title}</p>
+                        <p className="text-2xl font-bold text-gray-900">{stat.value}</p>
+                        <p className={`text-sm ${stat.color} flex items-center gap-1`}>
+                          <TrendingUp className="h-4 w-4" />
+                          {stat.change}
+                        </p>
+                      </div>
+                      <div className={`p-3 rounded-lg bg-gray-100`}>
+                        <stat.icon className={`h-6 w-6 ${stat.color}`} />
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
+              ))}
+            </div>
+
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+              {/* Recent Orders */}
+              <Card>
+                <CardHeader>
+                  <CardTitle className="flex items-center justify-between">
+                    Recent Orders
+                    <Button variant="outline" size="sm">
+                      View All
+                    </Button>
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className="space-y-4">
+                    {recentOrders.map((order, index) => (
+                      <div key={index} className="flex items-center justify-between p-4 border rounded-lg">
+                        <div>
+                          <p className="font-medium">{order.id}</p>
+                          <p className="text-sm text-gray-600">{order.customer}</p>
+                          <p className="text-sm text-gray-500">{order.service}</p>
+                        </div>
+                        <div className="text-right">
+                          <p className="font-medium">{order.amount}</p>
+                          <Badge variant={order.status === "Active" ? "default" : "secondary"}>{order.status}</Badge>
+                        </div>
+                      </div>
+                    ))}
                   </div>
-                  <div className={`p-3 rounded-lg bg-gray-100`}>
-                    <stat.icon className={`h-6 w-6 ${stat.color}`} />
+                </CardContent>
+              </Card>
+
+              {/* Upcoming Renewals */}
+              <Card>
+                <CardHeader>
+                  <CardTitle className="flex items-center justify-between">
+                    Upcoming Renewals
+                    <AlertCircle className="h-5 w-5 text-orange-500" />
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className="space-y-4">
+                    {upcomingRenewals.map((renewal, index) => (
+                      <div key={index} className="flex items-center justify-between p-4 border rounded-lg">
+                        <div>
+                          <p className="font-medium">{renewal.domain}</p>
+                          <p className="text-sm text-gray-600">{renewal.customer}</p>
+                          <p className="text-sm text-orange-600">Expires: {renewal.expires}</p>
+                        </div>
+                        <div className="text-right">
+                          <p className="font-medium">{renewal.amount}</p>
+                          <Button size="sm" variant="outline">
+                            Remind
+                          </Button>
+                        </div>
+                      </div>
+                    ))}
                   </div>
+                </CardContent>
+              </Card>
+            </div>
+
+            {/* Quick Actions */}
+            <Card>
+              <CardHeader>
+                <CardTitle>Quick Actions</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-6 gap-4">
+                  <Button className="flex flex-col items-center gap-2 h-20">
+                    <Users className="h-6 w-6" />
+                    <span className="text-sm">Manage Users</span>
+                  </Button>
+                  <Button className="flex flex-col items-center gap-2 h-20 bg-transparent" variant="outline">
+                    <Globe className="h-6 w-6" />
+                    <span className="text-sm">Domain Tools</span>
+                  </Button>
+                  <Button className="flex flex-col items-center gap-2 h-20 bg-transparent" variant="outline">
+                    <Server className="h-6 w-6" />
+                    <span className="text-sm">Server Status</span>
+                  </Button>
+                  <Button className="flex flex-col items-center gap-2 h-20 bg-transparent" variant="outline">
+                    <BarChart3 className="h-6 w-6" />
+                    <span className="text-sm">Analytics</span>
+                  </Button>
+                  <Button className="flex flex-col items-center gap-2 h-20 bg-transparent" variant="outline">
+                    <DollarSign className="h-6 w-6" />
+                    <span className="text-sm">Billing</span>
+                  </Button>
+                  <Button className="flex flex-col items-center gap-2 h-20 bg-transparent" variant="outline">
+                    <Settings className="h-6 w-6" />
+                    <span className="text-sm">Settings</span>
+                  </Button>
                 </div>
               </CardContent>
             </Card>
-          ))}
-        </div>
+          </TabsContent>
 
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 mb-8">
-          {/* Recent Orders */}
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center justify-between">
-                Recent Orders
-                <Button variant="outline" size="sm">
-                  View All
-                </Button>
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="space-y-4">
-                {recentOrders.map((order, index) => (
-                  <div key={index} className="flex items-center justify-between p-4 border rounded-lg">
-                    <div>
-                      <p className="font-medium">{order.id}</p>
-                      <p className="text-sm text-gray-600">{order.customer}</p>
-                      <p className="text-sm text-gray-500">{order.service}</p>
-                    </div>
-                    <div className="text-right">
-                      <p className="font-medium">{order.amount}</p>
-                      <Badge variant={order.status === "Active" ? "default" : "secondary"}>{order.status}</Badge>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </CardContent>
-          </Card>
+          <TabsContent value="clients">
+            <ClientManagement />
+          </TabsContent>
 
-          {/* Upcoming Renewals */}
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center justify-between">
-                Upcoming Renewals
-                <AlertCircle className="h-5 w-5 text-orange-500" />
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="space-y-4">
-                {upcomingRenewals.map((renewal, index) => (
-                  <div key={index} className="flex items-center justify-between p-4 border rounded-lg">
-                    <div>
-                      <p className="font-medium">{renewal.domain}</p>
-                      <p className="text-sm text-gray-600">{renewal.customer}</p>
-                      <p className="text-sm text-orange-600">Expires: {renewal.expires}</p>
-                    </div>
-                    <div className="text-right">
-                      <p className="font-medium">{renewal.amount}</p>
-                      <Button size="sm" variant="outline">
-                        Remind
-                      </Button>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </CardContent>
-          </Card>
-        </div>
+          <TabsContent value="orders" className="space-y-6">
+            <Card>
+              <CardHeader>
+                <CardTitle>Order Management</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <p className="text-gray-500">Order management interface will be implemented here</p>
+              </CardContent>
+            </Card>
+          </TabsContent>
 
-        {/* Quick Actions */}
-        <Card>
-          <CardHeader>
-            <CardTitle>Quick Actions</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-6 gap-4">
-              <Button className="flex flex-col items-center gap-2 h-20">
-                <Users className="h-6 w-6" />
-                <span className="text-sm">Manage Users</span>
-              </Button>
-              <Button className="flex flex-col items-center gap-2 h-20" variant="outline">
-                <Globe className="h-6 w-6" />
-                <span className="text-sm">Domain Tools</span>
-              </Button>
-              <Button className="flex flex-col items-center gap-2 h-20" variant="outline">
-                <Server className="h-6 w-6" />
-                <span className="text-sm">Server Status</span>
-              </Button>
-              <Button className="flex flex-col items-center gap-2 h-20" variant="outline">
-                <BarChart3 className="h-6 w-6" />
-                <span className="text-sm">Analytics</span>
-              </Button>
-              <Button className="flex flex-col items-center gap-2 h-20" variant="outline">
-                <DollarSign className="h-6 w-6" />
-                <span className="text-sm">Billing</span>
-              </Button>
-              <Button className="flex flex-col items-center gap-2 h-20" variant="outline">
-                <Settings className="h-6 w-6" />
-                <span className="text-sm">Settings</span>
-              </Button>
-            </div>
-          </CardContent>
-        </Card>
+          <TabsContent value="billing" className="space-y-6">
+            <Card>
+              <CardHeader>
+                <CardTitle>Billing Management</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <p className="text-gray-500">Billing management interface will be implemented here</p>
+              </CardContent>
+            </Card>
+          </TabsContent>
+
+          <TabsContent value="settings" className="space-y-6">
+            <Card>
+              <CardHeader>
+                <CardTitle>System Settings</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <p className="text-gray-500">System settings interface will be implemented here</p>
+              </CardContent>
+            </Card>
+          </TabsContent>
+        </Tabs>
       </div>
     </div>
   )

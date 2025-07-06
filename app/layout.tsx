@@ -3,13 +3,17 @@ import type { Metadata } from "next"
 import { Inter } from "next/font/google"
 import "./globals.css"
 import { Navigation } from "@/components/navigation"
+import { Footer } from "@/components/footer"
+import { ThemeProvider } from "@/components/theme-provider"
+import { Toaster } from "@/components/ui/toaster"
+import { SuppressResizeObserverError } from "@/components/suppress-resize-observer-error"
 
 const inter = Inter({ subsets: ["latin"] })
 
 export const metadata: Metadata = {
-  title: "Host Domain - Your Profitable Gateway to Domains & Hosting",
+  title: "HostDomainReseller - Premium Web Hosting & Domain Services",
   description:
-    "Professional domain registration and premium hosting solutions with 50% profit margins. Start your hosting business today with our white-label platform.",
+    "Professional web hosting, domain registration, and reseller services with 24/7 support and 99.9% uptime guarantee.",
     generator: 'v0.dev'
 }
 
@@ -19,10 +23,17 @@ export default function RootLayout({
   children: React.ReactNode
 }) {
   return (
-    <html lang="en">
+    <html lang="en" suppressHydrationWarning>
       <body className={inter.className}>
-        <Navigation />
-        {children}
+        <ThemeProvider attribute="class" defaultTheme="system" enableSystem disableTransitionOnChange>
+          <SuppressResizeObserverError />
+          <div className="flex flex-col min-h-screen">
+            <Navigation />
+            <main className="flex-1">{children}</main>
+            <Footer />
+          </div>
+          <Toaster />
+        </ThemeProvider>
       </body>
     </html>
   )
