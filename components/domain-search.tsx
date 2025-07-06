@@ -5,23 +5,32 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Card, CardContent } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
-import { Search, Check, X } from "lucide-react"
+import { Search, Check, X, ShoppingCart, Loader2 } from "lucide-react"
+import { useToast } from "@/hooks/use-toast"
+
+interface DomainResult {
+  domain: string
+  price: string
+  available: boolean
+  popular: boolean
+}
 
 export function DomainSearch() {
   const [searchTerm, setSearchTerm] = useState("")
   const [isSearching, setIsSearching] = useState(false)
   const [showResults, setShowResults] = useState(false)
-  const [mockDomainResults, setMockDomainResults] = useState([
-    { domain: ".com", price: "$12.99", available: true, popular: true },
-    { domain: ".net", price: "$14.99", available: true, popular: false },
-    { domain: ".org", price: "$13.99", available: false, popular: false },
-    { domain: ".io", price: "$49.99", available: true, popular: true },
-    { domain: ".co", price: "$29.99", available: true, popular: false },
-    { domain: ".app", price: "$19.99", available: true, popular: true },
-  ])
+  const [results, setResults] = useState<DomainResult[]>([])
+  const [cart, setCart] = useState<DomainResult[]>([])
+  const { toast } = useToast()
 
   const handleSearch = async () => {
-    if (!searchTerm.trim()) return
+    if (!searchTerm.trim()) {
+      toast({
+        title: "Please enter a domain name",
+        variant: "destructive",
+      })
+      return
+    }
 
     setIsSearching(true)
     try {
@@ -35,16 +44,43 @@ export function DomainSearch() {
 
       if (response.ok) {
         const data = await response.json()
-        setMockDomainResults(data.results)
+        setResults(data.results || [])
         setShowResults(true)
+        toast({
+          title: "Domain search completed",
+          description: `Found ${data.results?.length || 0} results for "${searchTerm}"`,
+        })
       } else {
-        console.error("Domain search failed")
+        throw new Error("Search failed")
       }
     } catch (error) {
       console.error("Domain search error:", error)
+      toast({
+        title: "Search failed",
+        description: "Please try again later",
+        variant: "destructive",
+      })
     } finally {
       setIsSearching(false)
     }
+  }
+
+  const addToCart = (domain: DomainResult) => {
+    if (!cart.find((item) => item.domain === domain.domain)) {
+      setCart([...cart, domain])
+      toast({
+        title: "Added to cart",
+        description: `${searchTerm}${domain.domain} added to your cart`,
+      })
+    }
+  }
+
+  const removeFromCart = (domainToRemove: string) => {
+    setCart(cart.filter((item) => item.domain !== domainToRemove))
+    toast({
+      title: "Removed from cart",
+      description: `Domain removed from your cart`,
+    })
   }
 
   return (
@@ -73,19 +109,51 @@ export function DomainSearch() {
               disabled={isSearching || !searchTerm.trim()}
               className="h-14 px-8 text-lg bg-blue-600 hover:bg-blue-700"
             >
-              {isSearching ? "Searching..." : "Search"}
+              {isSearching ? (
+                <>
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  Searching...
+                </>
+              ) : (
+                "Search"
+              )}
             </Button>
           </div>
+
+          {/* Cart Summary */}
+          {cart.length > 0 && (
+            <div className="mb-8">
+              <Card className="bg-blue-50 border-blue-200">
+                <CardContent className="p-4">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-2">
+                      <ShoppingCart className="h-5 w-5 text-blue-600" />
+                      <span className="font-medium">{cart.length} domain(s) in cart</span>
+                    </div>
+                    <div className="flex items-center gap-4">
+                      <span className="font-bold text-blue-600">
+                        Total: $
+                        {cart.reduce((sum, item) => sum + Number.parseFloat(item.price.replace("$", "")), 0).toFixed(2)}
+                      </span>
+                      <Button size="sm" className="bg-blue-600 hover:bg-blue-700">
+                        Checkout
+                      </Button>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+            </div>
+          )}
 
           {showResults && (
             <Card className="max-w-3xl mx-auto">
               <CardContent className="p-6">
                 <h3 className="text-2xl font-semibold mb-6">Results for "{searchTerm}"</h3>
                 <div className="space-y-4">
-                  {mockDomainResults.map((result, index) => (
+                  {results.map((result, index) => (
                     <div
                       key={index}
-                      className="flex items-center justify-between p-4 border rounded-lg hover:bg-gray-50"
+                      className="flex items-center justify-between p-4 border rounded-lg hover:bg-gray-50 transition-colors"
                     >
                       <div className="flex items-center gap-4">
                         <div className="flex items-center gap-2">
@@ -103,13 +171,25 @@ export function DomainSearch() {
                       </div>
                       <div className="flex items-center gap-4">
                         <span className="text-xl font-bold text-blue-600">{result.price}/year</span>
-                        <Button
-                          disabled={!result.available}
-                          variant={result.available ? "default" : "secondary"}
-                          className={result.available ? "bg-blue-600 hover:bg-blue-700" : ""}
-                        >
-                          {result.available ? "Add to Cart" : "Unavailable"}
-                        </Button>
+                        {result.available ? (
+                          cart.find((item) => item.domain === result.domain) ? (
+                            <Button
+                              variant="outline"
+                              onClick={() => removeFromCart(result.domain)}
+                              className="text-red-600 border-red-600 hover:bg-red-50"
+                            >
+                              Remove
+                            </Button>
+                          ) : (
+                            <Button onClick={() => addToCart(result)} className="bg-blue-600 hover:bg-blue-700">
+                              Add to Cart
+                            </Button>
+                          )
+                        ) : (
+                          <Button disabled variant="secondary">
+                            Unavailable
+                          </Button>
+                        )}
                       </div>
                     </div>
                   ))}

@@ -1,70 +1,79 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
-import { Button } from "@/components/ui/button"
-import { Badge } from "@/components/ui/badge"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
-import { DollarSign, Users, Globe, Server, TrendingUp, AlertCircle, Settings, BarChart3 } from "lucide-react"
+import { Badge } from "@/components/ui/badge"
 import { ClientManagement } from "./client-management"
+import { Users, Globe, Server, DollarSign, TrendingUp, Activity, FileText, Settings } from "lucide-react"
 
-const stats = [
-  {
-    title: "Total Revenue",
-    value: "$24,580",
-    change: "+12.5%",
-    icon: DollarSign,
-    color: "text-green-600",
-  },
-  {
-    title: "Active Customers",
-    value: "1,247",
-    change: "+8.2%",
-    icon: Users,
-    color: "text-blue-600",
-  },
-  {
-    title: "Domains Registered",
-    value: "3,456",
-    change: "+15.3%",
-    icon: Globe,
-    color: "text-purple-600",
-  },
-  {
-    title: "Hosting Accounts",
-    value: "892",
-    change: "+6.7%",
-    icon: Server,
-    color: "text-orange-600",
-  },
-]
-
-const recentOrders = [
-  { id: "#12345", customer: "John Doe", service: "Premium Hosting", amount: "$14.99", status: "Active" },
-  { id: "#12346", customer: "Jane Smith", service: "Domain Registration", amount: "$12.99", status: "Pending" },
-  { id: "#12347", customer: "Mike Johnson", service: "Business Hosting", amount: "$7.99", status: "Active" },
-  { id: "#12348", customer: "Sarah Wilson", service: "SSL Certificate", amount: "$49.99", status: "Active" },
-]
-
-const upcomingRenewals = [
-  { domain: "example.com", customer: "TechCorp", expires: "2024-01-15", amount: "$12.99" },
-  { domain: "mysite.net", customer: "WebStudio", expires: "2024-01-18", amount: "$14.99" },
-  { domain: "business.org", customer: "StartupInc", expires: "2024-01-22", amount: "$13.99" },
-]
+interface DashboardStats {
+  totalUsers: number
+  totalDomains: number
+  totalHosting: number
+  totalRevenue: number
+  monthlyRevenue: number
+  activeOrders: number
+  pendingInvoices: number
+  systemStatus: string
+}
 
 export function AdminDashboard() {
-  const [activeTab, setActiveTab] = useState("overview")
+  const [stats, setStats] = useState<DashboardStats>({
+    totalUsers: 0,
+    totalDomains: 0,
+    totalHosting: 0,
+    totalRevenue: 0,
+    monthlyRevenue: 0,
+    activeOrders: 0,
+    pendingInvoices: 0,
+    systemStatus: "operational",
+  })
+  const [loading, setLoading] = useState(true)
+
+  useEffect(() => {
+    fetchDashboardStats()
+  }, [])
+
+  const fetchDashboardStats = async () => {
+    try {
+      const token = localStorage.getItem("token")
+      if (!token) return
+
+      const response = await fetch("/api/dashboard/stats", {
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      })
+
+      if (response.ok) {
+        const data = await response.json()
+        setStats(data.stats)
+      }
+    } catch (error) {
+      console.error("Failed to fetch dashboard stats:", error)
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  const formatCurrency = (amount: number) => {
+    return new Intl.NumberFormat("en-US", {
+      style: "currency",
+      currency: "USD",
+    }).format(amount)
+  }
 
   return (
-    <div className="min-h-screen bg-gray-50 p-6">
-      <div className="max-w-7xl mx-auto">
+    <div className="min-h-screen bg-gray-50">
+      <div className="container mx-auto px-4 py-8">
         {/* Header */}
         <div className="mb-8">
           <h1 className="text-3xl font-bold text-gray-900 mb-2">Admin Dashboard</h1>
           <p className="text-gray-600">Manage your hosting business and monitor performance</p>
         </div>
 
-        <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
+        <Tabs defaultValue="overview" className="space-y-6">
           <TabsList className="grid w-full grid-cols-5">
             <TabsTrigger value="overview">Overview</TabsTrigger>
             <TabsTrigger value="clients">Client Portal</TabsTrigger>
@@ -73,124 +82,130 @@ export function AdminDashboard() {
             <TabsTrigger value="settings">Settings</TabsTrigger>
           </TabsList>
 
-          <TabsContent value="overview" className="space-y-8">
-            {/* Stats Grid */}
+          <TabsContent value="overview" className="space-y-6">
+            {/* Stats Cards */}
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-              {stats.map((stat, index) => (
-                <Card key={index}>
-                  <CardContent className="p-6">
-                    <div className="flex items-center justify-between">
-                      <div>
-                        <p className="text-sm font-medium text-gray-600">{stat.title}</p>
-                        <p className="text-2xl font-bold text-gray-900">{stat.value}</p>
-                        <p className={`text-sm ${stat.color} flex items-center gap-1`}>
-                          <TrendingUp className="h-4 w-4" />
-                          {stat.change}
-                        </p>
-                      </div>
-                      <div className={`p-3 rounded-lg bg-gray-100`}>
-                        <stat.icon className={`h-6 w-6 ${stat.color}`} />
-                      </div>
+              <Card>
+                <CardContent className="p-6">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <p className="text-sm font-medium text-gray-600">Total Users</p>
+                      <p className="text-2xl font-bold text-gray-900">{stats.totalUsers}</p>
+                      <p className="text-xs text-green-600">+12% from last month</p>
                     </div>
-                  </CardContent>
-                </Card>
-              ))}
-            </div>
-
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-              {/* Recent Orders */}
-              <Card>
-                <CardHeader>
-                  <CardTitle className="flex items-center justify-between">
-                    Recent Orders
-                    <Button variant="outline" size="sm">
-                      View All
-                    </Button>
-                  </CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <div className="space-y-4">
-                    {recentOrders.map((order, index) => (
-                      <div key={index} className="flex items-center justify-between p-4 border rounded-lg">
-                        <div>
-                          <p className="font-medium">{order.id}</p>
-                          <p className="text-sm text-gray-600">{order.customer}</p>
-                          <p className="text-sm text-gray-500">{order.service}</p>
-                        </div>
-                        <div className="text-right">
-                          <p className="font-medium">{order.amount}</p>
-                          <Badge variant={order.status === "Active" ? "default" : "secondary"}>{order.status}</Badge>
-                        </div>
-                      </div>
-                    ))}
+                    <Users className="h-8 w-8 text-blue-600" />
                   </div>
                 </CardContent>
               </Card>
 
-              {/* Upcoming Renewals */}
               <Card>
-                <CardHeader>
-                  <CardTitle className="flex items-center justify-between">
-                    Upcoming Renewals
-                    <AlertCircle className="h-5 w-5 text-orange-500" />
-                  </CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <div className="space-y-4">
-                    {upcomingRenewals.map((renewal, index) => (
-                      <div key={index} className="flex items-center justify-between p-4 border rounded-lg">
-                        <div>
-                          <p className="font-medium">{renewal.domain}</p>
-                          <p className="text-sm text-gray-600">{renewal.customer}</p>
-                          <p className="text-sm text-orange-600">Expires: {renewal.expires}</p>
-                        </div>
-                        <div className="text-right">
-                          <p className="font-medium">{renewal.amount}</p>
-                          <Button size="sm" variant="outline">
-                            Remind
-                          </Button>
-                        </div>
-                      </div>
-                    ))}
+                <CardContent className="p-6">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <p className="text-sm font-medium text-gray-600">Active Domains</p>
+                      <p className="text-2xl font-bold text-gray-900">{stats.totalDomains}</p>
+                      <p className="text-xs text-green-600">+8% from last month</p>
+                    </div>
+                    <Globe className="h-8 w-8 text-green-600" />
+                  </div>
+                </CardContent>
+              </Card>
+
+              <Card>
+                <CardContent className="p-6">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <p className="text-sm font-medium text-gray-600">Hosting Accounts</p>
+                      <p className="text-2xl font-bold text-gray-900">{stats.totalHosting}</p>
+                      <p className="text-xs text-green-600">+15% from last month</p>
+                    </div>
+                    <Server className="h-8 w-8 text-purple-600" />
+                  </div>
+                </CardContent>
+              </Card>
+
+              <Card>
+                <CardContent className="p-6">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <p className="text-sm font-medium text-gray-600">Monthly Revenue</p>
+                      <p className="text-2xl font-bold text-gray-900">{formatCurrency(stats.monthlyRevenue)}</p>
+                      <p className="text-xs text-green-600">+23% from last month</p>
+                    </div>
+                    <DollarSign className="h-8 w-8 text-orange-600" />
                   </div>
                 </CardContent>
               </Card>
             </div>
 
-            {/* Quick Actions */}
-            <Card>
-              <CardHeader>
-                <CardTitle>Quick Actions</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-6 gap-4">
-                  <Button className="flex flex-col items-center gap-2 h-20">
-                    <Users className="h-6 w-6" />
-                    <span className="text-sm">Manage Users</span>
-                  </Button>
-                  <Button className="flex flex-col items-center gap-2 h-20 bg-transparent" variant="outline">
-                    <Globe className="h-6 w-6" />
-                    <span className="text-sm">Domain Tools</span>
-                  </Button>
-                  <Button className="flex flex-col items-center gap-2 h-20 bg-transparent" variant="outline">
-                    <Server className="h-6 w-6" />
-                    <span className="text-sm">Server Status</span>
-                  </Button>
-                  <Button className="flex flex-col items-center gap-2 h-20 bg-transparent" variant="outline">
-                    <BarChart3 className="h-6 w-6" />
-                    <span className="text-sm">Analytics</span>
-                  </Button>
-                  <Button className="flex flex-col items-center gap-2 h-20 bg-transparent" variant="outline">
-                    <DollarSign className="h-6 w-6" />
-                    <span className="text-sm">Billing</span>
-                  </Button>
-                  <Button className="flex flex-col items-center gap-2 h-20 bg-transparent" variant="outline">
-                    <Settings className="h-6 w-6" />
-                    <span className="text-sm">Settings</span>
-                  </Button>
-                </div>
-              </CardContent>
-            </Card>
+            {/* Additional Stats */}
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+              <Card>
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2">
+                    <TrendingUp className="h-5 w-5" />
+                    Revenue Overview
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className="space-y-4">
+                    <div className="flex items-center justify-between">
+                      <span className="text-sm text-gray-600">Total Revenue</span>
+                      <span className="font-medium">{formatCurrency(stats.totalRevenue)}</span>
+                    </div>
+                    <div className="flex items-center justify-between">
+                      <span className="text-sm text-gray-600">This Month</span>
+                      <span className="font-medium">{formatCurrency(stats.monthlyRevenue)}</span>
+                    </div>
+                    <div className="flex items-center justify-between">
+                      <span className="text-sm text-gray-600">Active Orders</span>
+                      <span className="font-medium">{stats.activeOrders}</span>
+                    </div>
+                    <div className="flex items-center justify-between">
+                      <span className="text-sm text-gray-600">Pending Invoices</span>
+                      <Badge variant="secondary">{stats.pendingInvoices}</Badge>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+
+              <Card>
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2">
+                    <Activity className="h-5 w-5" />
+                    System Status
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className="space-y-4">
+                    <div className="flex items-center justify-between">
+                      <span className="text-sm text-gray-600">Overall Status</span>
+                      <Badge variant="default" className="bg-green-100 text-green-800">
+                        Operational
+                      </Badge>
+                    </div>
+                    <div className="flex items-center justify-between">
+                      <span className="text-sm text-gray-600">Web Hosting</span>
+                      <Badge variant="default" className="bg-green-100 text-green-800">
+                        99.9% Uptime
+                      </Badge>
+                    </div>
+                    <div className="flex items-center justify-between">
+                      <span className="text-sm text-gray-600">Domain Services</span>
+                      <Badge variant="default" className="bg-green-100 text-green-800">
+                        Online
+                      </Badge>
+                    </div>
+                    <div className="flex items-center justify-between">
+                      <span className="text-sm text-gray-600">Payment Gateway</span>
+                      <Badge variant="default" className="bg-green-100 text-green-800">
+                        Active
+                      </Badge>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+            </div>
           </TabsContent>
 
           <TabsContent value="clients">
@@ -200,10 +215,13 @@ export function AdminDashboard() {
           <TabsContent value="orders" className="space-y-6">
             <Card>
               <CardHeader>
-                <CardTitle>Order Management</CardTitle>
+                <CardTitle className="flex items-center gap-2">
+                  <FileText className="h-5 w-5" />
+                  Recent Orders
+                </CardTitle>
               </CardHeader>
               <CardContent>
-                <p className="text-gray-500">Order management interface will be implemented here</p>
+                <div className="text-center py-8 text-gray-500">Order management coming soon...</div>
               </CardContent>
             </Card>
           </TabsContent>
@@ -211,10 +229,13 @@ export function AdminDashboard() {
           <TabsContent value="billing" className="space-y-6">
             <Card>
               <CardHeader>
-                <CardTitle>Billing Management</CardTitle>
+                <CardTitle className="flex items-center gap-2">
+                  <DollarSign className="h-5 w-5" />
+                  Billing Management
+                </CardTitle>
               </CardHeader>
               <CardContent>
-                <p className="text-gray-500">Billing management interface will be implemented here</p>
+                <div className="text-center py-8 text-gray-500">Billing management coming soon...</div>
               </CardContent>
             </Card>
           </TabsContent>
@@ -222,10 +243,13 @@ export function AdminDashboard() {
           <TabsContent value="settings" className="space-y-6">
             <Card>
               <CardHeader>
-                <CardTitle>System Settings</CardTitle>
+                <CardTitle className="flex items-center gap-2">
+                  <Settings className="h-5 w-5" />
+                  System Settings
+                </CardTitle>
               </CardHeader>
               <CardContent>
-                <p className="text-gray-500">System settings interface will be implemented here</p>
+                <div className="text-center py-8 text-gray-500">Settings panel coming soon...</div>
               </CardContent>
             </Card>
           </TabsContent>

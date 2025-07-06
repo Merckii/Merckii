@@ -5,232 +5,120 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Badge } from "@/components/ui/badge"
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog"
 import { Progress } from "@/components/ui/progress"
-import { Search, Eye, Mail, Phone, Calendar, DollarSign, Globe, Server, FileText, Activity } from "lucide-react"
+import {
+  Search,
+  Users,
+  Eye,
+  Mail,
+  Calendar,
+  Globe,
+  Server,
+  FileText,
+  CreditCard,
+  Activity,
+  Loader2,
+} from "lucide-react"
 
 interface Client {
   id: number
+  name: string
   email: string
-  full_name: string
-  company_name?: string
-  phone?: string
-  plan_type: string
+  company?: string
+  status: string
   created_at: string
-  last_login?: string
+  domain_count: number
+  hosting_count: number
+  order_count: number
   total_spent: number
-  total_orders: number
-  active_domains: number
-  active_hosting: number
-  status: "active" | "inactive" | "suspended"
 }
 
 interface ClientDetails {
-  user: Client
-  domains: Array<{
-    id: number
-    domain_name: string
-    extension: string
-    status: string
-    expiration_date: string
-    auto_renew: boolean
-    price: number
-  }>
-  hosting: Array<{
-    id: number
-    plan_name: string
-    plan_type: string
-    disk_space_gb: number
-    bandwidth_gb: number
-    status: string
-    expiration_date: string
-    price: number
-    disk_used: number
-    bandwidth_used: number
-  }>
-  invoices: Array<{
-    id: number
-    invoice_number: string
-    total_amount: number
-    status: string
-    due_date: string
-    created_at: string
-  }>
+  client: Client
+  domains: any[]
+  hosting: any[]
+  invoices: any[]
+  orders: any[]
+  payments: any[]
 }
 
 export function ClientManagement() {
   const [clients, setClients] = useState<Client[]>([])
-  const [searchTerm, setSearchTerm] = useState("")
   const [loading, setLoading] = useState(true)
+  const [searchTerm, setSearchTerm] = useState("")
   const [selectedClient, setSelectedClient] = useState<ClientDetails | null>(null)
   const [clientDetailsLoading, setClientDetailsLoading] = useState(false)
-
-  // Mock data for demonstration
-  const mockClients: Client[] = [
-    {
-      id: 1,
-      email: "john.doe@example.com",
-      full_name: "John Doe",
-      company_name: "Tech Solutions Inc",
-      phone: "+1-555-0123",
-      plan_type: "business",
-      created_at: "2023-01-15T10:30:00Z",
-      last_login: "2024-01-05T14:22:00Z",
-      total_spent: 1250.0,
-      total_orders: 8,
-      active_domains: 3,
-      active_hosting: 2,
-      status: "active",
-    },
-    {
-      id: 2,
-      email: "jane.smith@example.com",
-      full_name: "Jane Smith",
-      company_name: "Creative Agency",
-      phone: "+1-555-0456",
-      plan_type: "premium",
-      created_at: "2023-03-22T09:15:00Z",
-      last_login: "2024-01-04T11:45:00Z",
-      total_spent: 2100.0,
-      total_orders: 12,
-      active_domains: 5,
-      active_hosting: 3,
-      status: "active",
-    },
-    {
-      id: 3,
-      email: "mike.johnson@example.com",
-      full_name: "Mike Johnson",
-      company_name: null,
-      phone: "+1-555-0789",
-      plan_type: "starter",
-      created_at: "2023-06-10T16:20:00Z",
-      last_login: "2023-12-28T09:30:00Z",
-      total_spent: 450.0,
-      total_orders: 3,
-      active_domains: 1,
-      active_hosting: 1,
-      status: "active",
-    },
-    {
-      id: 4,
-      email: "sarah.wilson@example.com",
-      full_name: "Sarah Wilson",
-      company_name: "E-commerce Store",
-      phone: "+1-555-0321",
-      plan_type: "business",
-      created_at: "2023-08-05T12:45:00Z",
-      last_login: "2024-01-03T16:10:00Z",
-      total_spent: 890.0,
-      total_orders: 6,
-      active_domains: 2,
-      active_hosting: 1,
-      status: "active",
-    },
-  ]
+  const [showClientDialog, setShowClientDialog] = useState(false)
 
   useEffect(() => {
-    // Simulate API call
-    setTimeout(() => {
-      setClients(mockClients)
-      setLoading(false)
-    }, 1000)
-  }, [])
+    fetchClients()
+  }, [searchTerm])
 
-  const filteredClients = clients.filter(
-    (client) =>
-      client.full_name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      client.email.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      (client.company_name && client.company_name.toLowerCase().includes(searchTerm.toLowerCase())),
-  )
+  const fetchClients = async () => {
+    try {
+      const token = localStorage.getItem("token")
+      if (!token) return
+
+      const url = searchTerm ? `/api/admin/clients?search=${encodeURIComponent(searchTerm)}` : "/api/admin/clients"
+
+      const response = await fetch(url, {
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      })
+
+      if (response.ok) {
+        const data = await response.json()
+        setClients(data.clients || [])
+      }
+    } catch (error) {
+      console.error("Failed to fetch clients:", error)
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  const fetchClientDetails = async (clientId: number) => {
+    setClientDetailsLoading(true)
+    try {
+      const token = localStorage.getItem("token")
+      if (!token) return
+
+      const response = await fetch(`/api/admin/clients/${clientId}`, {
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      })
+
+      if (response.ok) {
+        const data = await response.json()
+        setSelectedClient(data)
+        setShowClientDialog(true)
+      }
+    } catch (error) {
+      console.error("Failed to fetch client details:", error)
+    } finally {
+      setClientDetailsLoading(false)
+    }
+  }
 
   const getStatusColor = (status: string) => {
     switch (status) {
       case "active":
-        return "bg-green-100 text-green-800"
-      case "inactive":
-        return "bg-gray-100 text-gray-800"
+        return "default"
       case "suspended":
-        return "bg-red-100 text-red-800"
+        return "destructive"
+      case "pending":
+        return "secondary"
       default:
-        return "bg-gray-100 text-gray-800"
+        return "outline"
     }
-  }
-
-  const loadClientDetails = async (clientId: number) => {
-    setClientDetailsLoading(true)
-
-    // Mock client details data
-    const mockDetails: ClientDetails = {
-      user: mockClients.find((c) => c.id === clientId)!,
-      domains: [
-        {
-          id: 1,
-          domain_name: "example",
-          extension: ".com",
-          status: "active",
-          expiration_date: "2024-12-15",
-          auto_renew: true,
-          price: 12.99,
-        },
-        {
-          id: 2,
-          domain_name: "mysite",
-          extension: ".net",
-          status: "active",
-          expiration_date: "2024-08-22",
-          auto_renew: false,
-          price: 14.99,
-        },
-      ],
-      hosting: [
-        {
-          id: 1,
-          plan_name: "Business Pro",
-          plan_type: "business",
-          disk_space_gb: 100,
-          bandwidth_gb: 1000,
-          status: "active",
-          expiration_date: "2024-06-15",
-          price: 29.99,
-          disk_used: 45,
-          bandwidth_used: 320,
-        },
-      ],
-      invoices: [
-        {
-          id: 1,
-          invoice_number: "INV-2024-001",
-          total_amount: 42.98,
-          status: "paid",
-          due_date: "2024-01-15",
-          created_at: "2024-01-01",
-        },
-        {
-          id: 2,
-          invoice_number: "INV-2023-045",
-          total_amount: 29.99,
-          status: "paid",
-          due_date: "2023-12-15",
-          created_at: "2023-12-01",
-        },
-      ],
-    }
-
-    setTimeout(() => {
-      setSelectedClient(mockDetails)
-      setClientDetailsLoading(false)
-    }, 500)
   }
 
   const formatDate = (dateString: string) => {
-    return new Date(dateString).toLocaleDateString("en-US", {
-      year: "numeric",
-      month: "short",
-      day: "numeric",
-    })
+    return new Date(dateString).toLocaleDateString()
   }
 
   const formatCurrency = (amount: number) => {
@@ -240,278 +128,338 @@ export function ClientManagement() {
     }).format(amount)
   }
 
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center p-8">
+        <Loader2 className="h-8 w-8 animate-spin" />
+      </div>
+    )
+  }
+
   return (
     <div className="space-y-6">
+      {/* Header */}
+      <div className="flex items-center justify-between">
+        <div className="flex items-center gap-2">
+          <Users className="h-6 w-6 text-blue-600" />
+          <h2 className="text-2xl font-bold">Client Management</h2>
+        </div>
+        <div className="flex items-center gap-4">
+          <div className="relative">
+            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
+            <Input
+              placeholder="Search clients..."
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              className="pl-10 w-64"
+            />
+          </div>
+        </div>
+      </div>
+
+      {/* Clients Table */}
       <Card>
         <CardHeader>
-          <CardTitle>Client Management</CardTitle>
-          <div className="flex items-center space-x-2">
-            <div className="relative flex-1 max-w-sm">
-              <Search className="absolute left-2 top-2.5 h-4 w-4 text-muted-foreground" />
-              <Input
-                placeholder="Search clients..."
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-                className="pl-8"
-              />
-            </div>
-          </div>
+          <CardTitle>All Clients ({clients.length})</CardTitle>
         </CardHeader>
         <CardContent>
-          {loading ? (
-            <div className="text-center py-8">Loading clients...</div>
-          ) : (
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Client</TableHead>
-                  <TableHead>Plan</TableHead>
-                  <TableHead>Domains</TableHead>
-                  <TableHead>Hosting</TableHead>
-                  <TableHead>Total Spent</TableHead>
-                  <TableHead>Status</TableHead>
-                  <TableHead>Actions</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {filteredClients.map((client) => (
-                  <TableRow key={client.id}>
-                    <TableCell>
-                      <div>
-                        <div className="font-medium">{client.full_name}</div>
-                        <div className="text-sm text-gray-500">{client.email}</div>
-                        {client.company_name && <div className="text-sm text-gray-400">{client.company_name}</div>}
+          <div className="space-y-4">
+            {clients.length === 0 ? (
+              <div className="text-center py-8 text-gray-500">No clients found</div>
+            ) : (
+              clients.map((client) => (
+                <div
+                  key={client.id}
+                  className="flex items-center justify-between p-4 border rounded-lg hover:bg-gray-50 transition-colors"
+                >
+                  <div className="flex items-center gap-4">
+                    <div className="bg-blue-100 p-2 rounded-full">
+                      <Users className="h-4 w-4 text-blue-600" />
+                    </div>
+                    <div>
+                      <div className="flex items-center gap-2">
+                        <h3 className="font-medium">{client.name}</h3>
+                        <Badge variant={getStatusColor(client.status)}>{client.status}</Badge>
                       </div>
-                    </TableCell>
-                    <TableCell>
-                      <Badge variant="outline" className="capitalize">
-                        {client.plan_type}
-                      </Badge>
-                    </TableCell>
-                    <TableCell>{client.active_domains}</TableCell>
-                    <TableCell>{client.active_hosting}</TableCell>
-                    <TableCell>{formatCurrency(client.total_spent)}</TableCell>
-                    <TableCell>
-                      <Badge className={getStatusColor(client.status)}>{client.status}</Badge>
-                    </TableCell>
-                    <TableCell>
-                      <Dialog>
-                        <DialogTrigger asChild>
-                          <Button variant="outline" size="sm" onClick={() => loadClientDetails(client.id)}>
-                            <Eye className="h-4 w-4 mr-1" />
-                            View
-                          </Button>
-                        </DialogTrigger>
-                        <DialogContent className="max-w-4xl max-h-[80vh] overflow-y-auto">
-                          <DialogHeader>
-                            <DialogTitle>Client Details</DialogTitle>
-                          </DialogHeader>
+                      <p className="text-sm text-gray-600">{client.email}</p>
+                      {client.company && <p className="text-sm text-gray-500">{client.company}</p>}
+                    </div>
+                  </div>
 
-                          {clientDetailsLoading ? (
-                            <div className="text-center py-8">Loading client details...</div>
-                          ) : selectedClient ? (
-                            <Tabs defaultValue="overview" className="w-full">
-                              <TabsList className="grid w-full grid-cols-5">
-                                <TabsTrigger value="overview">Overview</TabsTrigger>
-                                <TabsTrigger value="domains">Domains</TabsTrigger>
-                                <TabsTrigger value="hosting">Hosting</TabsTrigger>
-                                <TabsTrigger value="invoices">Invoices</TabsTrigger>
-                                <TabsTrigger value="activity">Activity</TabsTrigger>
-                              </TabsList>
-
-                              <TabsContent value="overview" className="space-y-4">
-                                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                                  <Card>
-                                    <CardHeader>
-                                      <CardTitle className="text-lg">Contact Information</CardTitle>
-                                    </CardHeader>
-                                    <CardContent className="space-y-3">
-                                      <div className="flex items-center gap-2">
-                                        <Mail className="h-4 w-4 text-gray-500" />
-                                        <span>{selectedClient.user.email}</span>
-                                      </div>
-                                      {selectedClient.user.phone && (
-                                        <div className="flex items-center gap-2">
-                                          <Phone className="h-4 w-4 text-gray-500" />
-                                          <span>{selectedClient.user.phone}</span>
-                                        </div>
-                                      )}
-                                      <div className="flex items-center gap-2">
-                                        <Calendar className="h-4 w-4 text-gray-500" />
-                                        <span>Joined {formatDate(selectedClient.user.created_at)}</span>
-                                      </div>
-                                      {selectedClient.user.last_login && (
-                                        <div className="flex items-center gap-2">
-                                          <Activity className="h-4 w-4 text-gray-500" />
-                                          <span>Last login {formatDate(selectedClient.user.last_login)}</span>
-                                        </div>
-                                      )}
-                                    </CardContent>
-                                  </Card>
-
-                                  <Card>
-                                    <CardHeader>
-                                      <CardTitle className="text-lg">Account Statistics</CardTitle>
-                                    </CardHeader>
-                                    <CardContent className="space-y-3">
-                                      <div className="flex items-center justify-between">
-                                        <div className="flex items-center gap-2">
-                                          <DollarSign className="h-4 w-4 text-green-500" />
-                                          <span>Total Spent</span>
-                                        </div>
-                                        <span className="font-medium">
-                                          {formatCurrency(selectedClient.user.total_spent)}
-                                        </span>
-                                      </div>
-                                      <div className="flex items-center justify-between">
-                                        <div className="flex items-center gap-2">
-                                          <FileText className="h-4 w-4 text-blue-500" />
-                                          <span>Total Orders</span>
-                                        </div>
-                                        <span className="font-medium">{selectedClient.user.total_orders}</span>
-                                      </div>
-                                      <div className="flex items-center justify-between">
-                                        <div className="flex items-center gap-2">
-                                          <Globe className="h-4 w-4 text-purple-500" />
-                                          <span>Active Domains</span>
-                                        </div>
-                                        <span className="font-medium">{selectedClient.user.active_domains}</span>
-                                      </div>
-                                      <div className="flex items-center justify-between">
-                                        <div className="flex items-center gap-2">
-                                          <Server className="h-4 w-4 text-orange-500" />
-                                          <span>Hosting Accounts</span>
-                                        </div>
-                                        <span className="font-medium">{selectedClient.user.active_hosting}</span>
-                                      </div>
-                                    </CardContent>
-                                  </Card>
-                                </div>
-                              </TabsContent>
-
-                              <TabsContent value="domains" className="space-y-4">
-                                <Table>
-                                  <TableHeader>
-                                    <TableRow>
-                                      <TableHead>Domain</TableHead>
-                                      <TableHead>Status</TableHead>
-                                      <TableHead>Expires</TableHead>
-                                      <TableHead>Auto Renew</TableHead>
-                                      <TableHead>Price</TableHead>
-                                    </TableRow>
-                                  </TableHeader>
-                                  <TableBody>
-                                    {selectedClient.domains.map((domain) => (
-                                      <TableRow key={domain.id}>
-                                        <TableCell className="font-medium">
-                                          {domain.domain_name}
-                                          {domain.extension}
-                                        </TableCell>
-                                        <TableCell>
-                                          <Badge className={getStatusColor(domain.status)}>{domain.status}</Badge>
-                                        </TableCell>
-                                        <TableCell>{formatDate(domain.expiration_date)}</TableCell>
-                                        <TableCell>
-                                          <Badge variant={domain.auto_renew ? "default" : "secondary"}>
-                                            {domain.auto_renew ? "Yes" : "No"}
-                                          </Badge>
-                                        </TableCell>
-                                        <TableCell>{formatCurrency(domain.price)}</TableCell>
-                                      </TableRow>
-                                    ))}
-                                  </TableBody>
-                                </Table>
-                              </TabsContent>
-
-                              <TabsContent value="hosting" className="space-y-4">
-                                {selectedClient.hosting.map((hosting) => (
-                                  <Card key={hosting.id}>
-                                    <CardHeader>
-                                      <CardTitle className="text-lg">{hosting.plan_name}</CardTitle>
-                                      <Badge className={getStatusColor(hosting.status)}>{hosting.status}</Badge>
-                                    </CardHeader>
-                                    <CardContent className="space-y-4">
-                                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                                        <div>
-                                          <div className="flex justify-between text-sm mb-1">
-                                            <span>Disk Usage</span>
-                                            <span>
-                                              {hosting.disk_used}GB / {hosting.disk_space_gb}GB
-                                            </span>
-                                          </div>
-                                          <Progress value={(hosting.disk_used / hosting.disk_space_gb) * 100} />
-                                        </div>
-                                        <div>
-                                          <div className="flex justify-between text-sm mb-1">
-                                            <span>Bandwidth Usage</span>
-                                            <span>
-                                              {hosting.bandwidth_used}GB / {hosting.bandwidth_gb}GB
-                                            </span>
-                                          </div>
-                                          <Progress value={(hosting.bandwidth_used / hosting.bandwidth_gb!) * 100} />
-                                        </div>
-                                      </div>
-                                      <div className="flex justify-between items-center">
-                                        <span>Expires: {formatDate(hosting.expiration_date)}</span>
-                                        <span className="font-medium">{formatCurrency(hosting.price)}/month</span>
-                                      </div>
-                                    </CardContent>
-                                  </Card>
-                                ))}
-                              </TabsContent>
-
-                              <TabsContent value="invoices" className="space-y-4">
-                                <Table>
-                                  <TableHeader>
-                                    <TableRow>
-                                      <TableHead>Invoice #</TableHead>
-                                      <TableHead>Amount</TableHead>
-                                      <TableHead>Status</TableHead>
-                                      <TableHead>Due Date</TableHead>
-                                      <TableHead>Created</TableHead>
-                                    </TableRow>
-                                  </TableHeader>
-                                  <TableBody>
-                                    {selectedClient.invoices.map((invoice) => (
-                                      <TableRow key={invoice.id}>
-                                        <TableCell className="font-medium">{invoice.invoice_number}</TableCell>
-                                        <TableCell>{formatCurrency(invoice.total_amount)}</TableCell>
-                                        <TableCell>
-                                          <Badge
-                                            className={
-                                              invoice.status === "paid"
-                                                ? "bg-green-100 text-green-800"
-                                                : "bg-yellow-100 text-yellow-800"
-                                            }
-                                          >
-                                            {invoice.status}
-                                          </Badge>
-                                        </TableCell>
-                                        <TableCell>{formatDate(invoice.due_date)}</TableCell>
-                                        <TableCell>{formatDate(invoice.created_at)}</TableCell>
-                                      </TableRow>
-                                    ))}
-                                  </TableBody>
-                                </Table>
-                              </TabsContent>
-
-                              <TabsContent value="activity" className="space-y-4">
-                                <div className="text-center py-8 text-gray-500">
-                                  Activity log will be implemented here
-                                </div>
-                              </TabsContent>
-                            </Tabs>
-                          ) : null}
-                        </DialogContent>
-                      </Dialog>
-                    </TableCell>
-                  </TableRow>
-                ))}
-              </TableBody>
-            </Table>
-          )}
+                  <div className="flex items-center gap-6 text-sm">
+                    <div className="text-center">
+                      <div className="font-medium">{client.domain_count}</div>
+                      <div className="text-gray-500">Domains</div>
+                    </div>
+                    <div className="text-center">
+                      <div className="font-medium">{client.hosting_count}</div>
+                      <div className="text-gray-500">Hosting</div>
+                    </div>
+                    <div className="text-center">
+                      <div className="font-medium">{formatCurrency(client.total_spent)}</div>
+                      <div className="text-gray-500">Total Spent</div>
+                    </div>
+                    <div className="text-center">
+                      <div className="font-medium">{formatDate(client.created_at)}</div>
+                      <div className="text-gray-500">Joined</div>
+                    </div>
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      onClick={() => fetchClientDetails(client.id)}
+                      disabled={clientDetailsLoading}
+                    >
+                      <Eye className="h-4 w-4" />
+                    </Button>
+                  </div>
+                </div>
+              ))
+            )}
+          </div>
         </CardContent>
       </Card>
+
+      {/* Client Details Dialog */}
+      <Dialog open={showClientDialog} onOpenChange={setShowClientDialog}>
+        <DialogContent className="max-w-4xl max-h-[80vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Users className="h-5 w-5" />
+              Client Details
+            </DialogTitle>
+          </DialogHeader>
+
+          {selectedClient && (
+            <Tabs defaultValue="overview" className="space-y-4">
+              <TabsList>
+                <TabsTrigger value="overview">Overview</TabsTrigger>
+                <TabsTrigger value="domains">Domains</TabsTrigger>
+                <TabsTrigger value="hosting">Hosting</TabsTrigger>
+                <TabsTrigger value="invoices">Invoices</TabsTrigger>
+                <TabsTrigger value="activity">Activity</TabsTrigger>
+              </TabsList>
+
+              <TabsContent value="overview" className="space-y-4">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <Card>
+                    <CardHeader>
+                      <CardTitle className="text-lg">Contact Information</CardTitle>
+                    </CardHeader>
+                    <CardContent className="space-y-2">
+                      <div className="flex items-center gap-2">
+                        <Mail className="h-4 w-4 text-gray-500" />
+                        <span>{selectedClient.client.email}</span>
+                      </div>
+                      {selectedClient.client.company && (
+                        <div className="flex items-center gap-2">
+                          <span className="text-sm text-gray-500">Company:</span>
+                          <span>{selectedClient.client.company}</span>
+                        </div>
+                      )}
+                      <div className="flex items-center gap-2">
+                        <Calendar className="h-4 w-4 text-gray-500" />
+                        <span>Joined {formatDate(selectedClient.client.created_at)}</span>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <Badge variant={getStatusColor(selectedClient.client.status)}>
+                          {selectedClient.client.status}
+                        </Badge>
+                      </div>
+                    </CardContent>
+                  </Card>
+
+                  <Card>
+                    <CardHeader>
+                      <CardTitle className="text-lg">Account Summary</CardTitle>
+                    </CardHeader>
+                    <CardContent className="space-y-4">
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-2">
+                          <Globe className="h-4 w-4 text-blue-600" />
+                          <span>Domains</span>
+                        </div>
+                        <span className="font-medium">{selectedClient.domains.length}</span>
+                      </div>
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-2">
+                          <Server className="h-4 w-4 text-green-600" />
+                          <span>Hosting Accounts</span>
+                        </div>
+                        <span className="font-medium">{selectedClient.hosting.length}</span>
+                      </div>
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-2">
+                          <FileText className="h-4 w-4 text-purple-600" />
+                          <span>Total Orders</span>
+                        </div>
+                        <span className="font-medium">{selectedClient.orders.length}</span>
+                      </div>
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-2">
+                          <CreditCard className="h-4 w-4 text-orange-600" />
+                          <span>Total Spent</span>
+                        </div>
+                        <span className="font-medium">
+                          {formatCurrency(selectedClient.payments.reduce((sum, p) => sum + p.amount, 0))}
+                        </span>
+                      </div>
+                    </CardContent>
+                  </Card>
+                </div>
+              </TabsContent>
+
+              <TabsContent value="domains" className="space-y-4">
+                <Card>
+                  <CardHeader>
+                    <CardTitle>Domain Portfolio</CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    {selectedClient.domains.length === 0 ? (
+                      <p className="text-gray-500 text-center py-4">No domains registered</p>
+                    ) : (
+                      <div className="space-y-3">
+                        {selectedClient.domains.map((domain, index) => (
+                          <div key={index} className="flex items-center justify-between p-3 border rounded-lg">
+                            <div>
+                              <div className="font-medium">
+                                {domain.domain_name}
+                                {domain.extension}
+                              </div>
+                              <div className="text-sm text-gray-500">Expires: {formatDate(domain.expiration_date)}</div>
+                            </div>
+                            <div className="flex items-center gap-2">
+                              <Badge variant={getStatusColor(domain.status)}>{domain.status}</Badge>
+                              {domain.auto_renew && (
+                                <Badge variant="outline" className="text-xs">
+                                  Auto-Renew
+                                </Badge>
+                              )}
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </CardContent>
+                </Card>
+              </TabsContent>
+
+              <TabsContent value="hosting" className="space-y-4">
+                <Card>
+                  <CardHeader>
+                    <CardTitle>Hosting Accounts</CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    {selectedClient.hosting.length === 0 ? (
+                      <p className="text-gray-500 text-center py-4">No hosting accounts</p>
+                    ) : (
+                      <div className="space-y-4">
+                        {selectedClient.hosting.map((host, index) => (
+                          <div key={index} className="p-4 border rounded-lg">
+                            <div className="flex items-center justify-between mb-3">
+                              <div>
+                                <h3 className="font-medium">{host.plan_name}</h3>
+                                <p className="text-sm text-gray-500">Created: {formatDate(host.created_at)}</p>
+                              </div>
+                              <Badge variant={getStatusColor(host.status)}>{host.status}</Badge>
+                            </div>
+
+                            <div className="space-y-3">
+                              <div>
+                                <div className="flex justify-between text-sm mb-1">
+                                  <span>Disk Usage</span>
+                                  <span>{host.disk_usage}%</span>
+                                </div>
+                                <Progress value={host.disk_usage} className="h-2" />
+                              </div>
+
+                              <div>
+                                <div className="flex justify-between text-sm mb-1">
+                                  <span>Bandwidth Usage</span>
+                                  <span>{host.bandwidth_usage}%</span>
+                                </div>
+                                <Progress value={host.bandwidth_usage} className="h-2" />
+                              </div>
+
+                              <div className="flex justify-between text-sm">
+                                <span>Email Accounts</span>
+                                <span>{host.email_accounts}</span>
+                              </div>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </CardContent>
+                </Card>
+              </TabsContent>
+
+              <TabsContent value="invoices" className="space-y-4">
+                <Card>
+                  <CardHeader>
+                    <CardTitle>Recent Invoices</CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    {selectedClient.invoices.length === 0 ? (
+                      <p className="text-gray-500 text-center py-4">No invoices found</p>
+                    ) : (
+                      <div className="space-y-3">
+                        {selectedClient.invoices.map((invoice, index) => (
+                          <div key={index} className="flex items-center justify-between p-3 border rounded-lg">
+                            <div>
+                              <div className="font-medium">{invoice.invoice_number}</div>
+                              <div className="text-sm text-gray-500">Due: {formatDate(invoice.due_date)}</div>
+                            </div>
+                            <div className="text-right">
+                              <div className="font-medium">{formatCurrency(invoice.total_amount)}</div>
+                              <Badge variant={getStatusColor(invoice.status)}>{invoice.status}</Badge>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </CardContent>
+                </Card>
+              </TabsContent>
+
+              <TabsContent value="activity" className="space-y-4">
+                <Card>
+                  <CardHeader>
+                    <CardTitle className="flex items-center gap-2">
+                      <Activity className="h-5 w-5" />
+                      Recent Activity
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="space-y-3">
+                      {selectedClient.orders.map((order, index) => (
+                        <div key={index} className="flex items-center gap-3 p-3 border rounded-lg">
+                          <div className="bg-blue-100 p-2 rounded-full">
+                            {order.order_type === "domain" ? (
+                              <Globe className="h-4 w-4 text-blue-600" />
+                            ) : (
+                              <Server className="h-4 w-4 text-blue-600" />
+                            )}
+                          </div>
+                          <div className="flex-1">
+                            <div className="font-medium">
+                              {order.order_type === "domain" ? "Domain Registration" : "Hosting Purchase"}
+                            </div>
+                            <div className="text-sm text-gray-500">
+                              {order.item_name} - {formatCurrency(order.amount)}
+                            </div>
+                            <div className="text-xs text-gray-400">{formatDate(order.created_at)}</div>
+                          </div>
+                          <Badge variant={getStatusColor(order.status)}>{order.status}</Badge>
+                        </div>
+                      ))}
+                    </div>
+                  </CardContent>
+                </Card>
+              </TabsContent>
+            </Tabs>
+          )}
+        </DialogContent>
+      </Dialog>
     </div>
   )
 }

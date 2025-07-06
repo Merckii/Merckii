@@ -1,52 +1,68 @@
 import { type NextRequest, NextResponse } from "next/server"
-import { getUserByEmail, updateUser } from "@/lib/db-queries"
 import bcrypt from "bcryptjs"
 import jwt from "jsonwebtoken"
+import { neon } from "@neondatabase/serverless"
 
-const JWT_SECRET = process.env.JWT_SECRET || "your-secret-key"
+const sql = neon(process.env.DATABASE_URL!)
 
 export async function POST(request: NextRequest) {
   try {
     const { email, password } = await request.json()
 
-    // Validate required fields
     if (!email || !password) {
       return NextResponse.json({ error: "Email and password are required" }, { status: 400 })
     }
 
-    // Get user by email
-    const user = await getUserByEmail(email.toLowerCase())
-    if (!user) {
+    // Find user by email
+    const users = await sql`
+      SELECT id, name, email, password, is_admin, role, status 
+      FROM users 
+      WHERE email = ${email}
+    `
+
+    if (users.length === 0) {
       return NextResponse.json({ error: "Invalid credentials" }, { status: 401 })
     }
 
+    const user = users[0]
+
+    // Check if account is active
+    if (user.status !== "active") {
+      return NextResponse.json({ error: "Account is not active" }, { status: 401 })
+    }
+
     // Verify password
-    const isValidPassword = await bcrypt.compare(password, user.password_hash)
+    const isValidPassword = await bcrypt.compare(password, user.password)
     if (!isValidPassword) {
       return NextResponse.json({ error: "Invalid credentials" }, { status: 401 })
     }
 
-    // Update last login
-    await updateUser(user.id, { last_login: new Date() })
-
-    // Create JWT token
+    // Generate JWT token
     const token = jwt.sign(
       {
         userId: user.id,
         email: user.email,
         isAdmin: user.is_admin,
+        role: user.role,
       },
-      JWT_SECRET,
-      { expiresIn: "7d" },
+      process.env.JWT_SECRET || "your-secret-key",
+      { expiresIn: "24h" },
     )
 
-    // Remove password hash from response
-    const { password_hash, ...userResponse } = user
+    // Return user data without password
+    const userData = {
+      id: user.id,
+      name: user.name,
+      email: user.email,
+      is_admin: user.is_admin,
+      role: user.role,
+      status: user.status,
+    }
 
     return NextResponse.json({
-      message: "Login successful",
-      user: userResponse,
       token,
+      user: userData,
+      message: "Login successful",
     })
   } catch (error) {
     console.error("Login error:", error)

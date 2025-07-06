@@ -1,12 +1,51 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { Button } from "@/components/ui/button"
-import { Globe, Menu, X } from "lucide-react"
+import { Globe, Menu, X, User, LogOut } from "lucide-react"
 import Link from "next/link"
+import { useRouter } from "next/navigation"
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu"
 
 export function Navigation() {
   const [isOpen, setIsOpen] = useState(false)
+  const [user, setUser] = useState<any>(null)
+  const router = useRouter()
+
+  useEffect(() => {
+    const token = localStorage.getItem("token")
+    const userData = localStorage.getItem("userData")
+
+    if (token && userData) {
+      try {
+        setUser(JSON.parse(userData))
+      } catch (error) {
+        console.error("Error parsing user data:", error)
+        localStorage.removeItem("token")
+        localStorage.removeItem("userData")
+      }
+    }
+  }, [])
+
+  const handleLogout = () => {
+    localStorage.removeItem("token")
+    localStorage.removeItem("userData")
+    setUser(null)
+    router.push("/")
+  }
+
+  const getDashboardLink = () => {
+    if (user?.is_admin || user?.role === "admin") {
+      return "/admin"
+    }
+    return "/customer"
+  }
 
   return (
     <nav className="bg-white shadow-sm border-b sticky top-0 z-50">
@@ -32,19 +71,42 @@ export function Navigation() {
             <Link href="/support" className="text-gray-700 hover:text-blue-600 transition-colors">
               Support
             </Link>
-            <Link href="/customer" className="text-gray-700 hover:text-blue-600 transition-colors">
-              Client Portal
-            </Link>
           </div>
 
           {/* Desktop Actions */}
           <div className="hidden md:flex items-center space-x-4">
-            <Link href="/login">
-              <Button variant="ghost">Login</Button>
-            </Link>
-            <Link href="/get-started">
-              <Button className="bg-blue-600 hover:bg-blue-700">Get Started</Button>
-            </Link>
+            {user ? (
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button variant="ghost" className="flex items-center gap-2">
+                    <User className="h-4 w-4" />
+                    {user.name || user.email}
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end">
+                  <DropdownMenuItem asChild>
+                    <Link href={getDashboardLink()}>Dashboard</Link>
+                  </DropdownMenuItem>
+                  <DropdownMenuItem asChild>
+                    <Link href="/billing">Billing</Link>
+                  </DropdownMenuItem>
+                  <DropdownMenuSeparator />
+                  <DropdownMenuItem onClick={handleLogout}>
+                    <LogOut className="h-4 w-4 mr-2" />
+                    Logout
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
+            ) : (
+              <>
+                <Link href="/login">
+                  <Button variant="ghost">Login</Button>
+                </Link>
+                <Link href="/register">
+                  <Button className="bg-blue-600 hover:bg-blue-700">Get Started</Button>
+                </Link>
+              </>
+            )}
           </div>
 
           {/* Mobile Menu Button */}
@@ -69,19 +131,32 @@ export function Navigation() {
               <Link href="/support" className="text-gray-700 hover:text-blue-600 transition-colors">
                 Support
               </Link>
-              <Link href="/customer" className="text-gray-700 hover:text-blue-600 transition-colors">
-                Client Portal
-              </Link>
-              <div className="flex flex-col space-y-2 pt-4">
-                <Link href="/login">
-                  <Button variant="ghost" className="justify-start">
-                    Login
+
+              {user ? (
+                <>
+                  <Link href={getDashboardLink()} className="text-gray-700 hover:text-blue-600 transition-colors">
+                    Dashboard
+                  </Link>
+                  <Link href="/billing" className="text-gray-700 hover:text-blue-600 transition-colors">
+                    Billing
+                  </Link>
+                  <Button variant="ghost" onClick={handleLogout} className="justify-start">
+                    <LogOut className="h-4 w-4 mr-2" />
+                    Logout
                   </Button>
-                </Link>
-                <Link href="/get-started">
-                  <Button className="bg-blue-600 hover:bg-blue-700 justify-start">Get Started</Button>
-                </Link>
-              </div>
+                </>
+              ) : (
+                <div className="flex flex-col space-y-2 pt-4">
+                  <Link href="/login">
+                    <Button variant="ghost" className="justify-start w-full">
+                      Login
+                    </Button>
+                  </Link>
+                  <Link href="/register">
+                    <Button className="bg-blue-600 hover:bg-blue-700 justify-start w-full">Get Started</Button>
+                  </Link>
+                </div>
+              )}
             </div>
           </div>
         )}
